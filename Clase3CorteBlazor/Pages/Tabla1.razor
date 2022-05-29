@@ -1,0 +1,89 @@
+﻿@page "/tabla1"
+
+@inject HttpClient _client;
+
+@using System.Net.Http.Json
+@using Clase3CorteBlazor.Data
+
+<MudButton OnClick="(args) => AgregarNuevoRegistro()" Variant="Variant.Filled" Color="Color.Primary">Añadir</MudButton>
+
+<MudDataGrid T="Usuario" Items="@Usuarios" ReadOnly="@_readOnly" EditMode="@(_isCellEditMode ? DataGridEditMode.Cell : DataGridEditMode.Form)"
+    StartedEditingItem="@StartedEditingItem" CancelledEditingItem="@CancelledEditingItem" CommittedItemChanges="@CommittedItemChanges"
+    Bordered="true" Dense="true" EditTrigger="@(_editTriggerRowClick ? DataGridEditTrigger.OnRowClick : DataGridEditTrigger.Manual)">
+    <Columns>
+        <Column T="Usuario" Field="idusuario" Title="Id" IsEditable="false" />
+        <Column T="Usuario" Field="identificacion" Title="Identificacion" />
+        <Column T="Usuario" Field="nombre" Title="Nombre"/>
+        <Column T="Usuario" Field="direccion" Title="Dirección"/>
+        <Column T="Usuario" Field="telefono" Title="Teléfono" />
+        <Column T="Usuario" Field="email" Title="E-Mail" />
+        <Column T="Usuario" Hidden="@(_isCellEditMode || _readOnly || _editTriggerRowClick)" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Outlined.Edit" OnClick="@context.Actions.StartEditingItem" />
+                 <MudIconButton Size="@Size.Small" Icon="@Icons.Outlined.Delete" OnClick="(args)=> EliminarEvento(context.Item)" />
+            </CellTemplate>
+        </Column>
+    </Columns>
+</MudDataGrid>
+
+
+
+@code {
+    private IEnumerable<Usuario> Usuarios = new List<Usuario>();
+    private bool _readOnly;
+    private bool _isCellEditMode;
+    private List<string> _events = new();
+    private bool _editTriggerRowClick;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var elemento = new List<Usuario>();
+        _client.BaseAddress = new Uri("https://localhost:7174/");
+
+        var requestMessage = new HttpRequestMessage(HttpMethod.Get, "Biblioteca/ConsultaUsuario");
+        var respuesta = await _client.SendAsync(requestMessage);
+
+        if(respuesta.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            var responseBody = await respuesta.Content.ReadAsStringAsync();
+            var listasUsuario = System.Text.Json.JsonSerializer.Deserialize<List<Usuario>>(responseBody);
+            Usuarios = listasUsuario;
+        }
+
+
+    }
+
+    void EliminarEvento(Usuario item)
+    {
+
+    }
+
+    void AgregarNuevoRegistro()
+    {
+        var elemento = new Usuario
+            {
+                identificacion = "52769305",
+                nombre = "Luz Nelsy Castro",
+                direccion = "Carrera 57 134 A 35 Casa 4",
+                telefono = "3134272483",
+                email = "luznelsy2004@yahoo.com"                
+    };
+        ((List<Usuario>)Usuarios).Add(elemento);
+        StateHasChanged();
+    }
+    // events
+    void StartedEditingItem(Usuario item)
+    {
+        _events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    void CancelledEditingItem(Usuario item)
+    {
+        _events.Insert(0, $"Event = CancelledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+    //Este servirá para guardar o actualizar registros.
+    void CommittedItemChanges(Usuario item)
+    {
+        _events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+}
